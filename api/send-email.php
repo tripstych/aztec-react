@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // --- Mailgun credentials (edit these on the server) ---
 $MAILGUN_API_KEY  = 'YOUR_MAILGUN_API_KEY';
 $MAILGUN_DOMAIN   = 'YOUR_MAILGUN_DOMAIN';
-$MAILGUN_RECIPIENT = ''; // leave blank to send to the customer email
+$MAILGUN_RECIPIENTS = 'recipient1@example.com, recipient2@example.com'; // comma-separated list
 // ------------------------------------------------------
 
 // Read JSON body
@@ -68,7 +68,7 @@ if ($additionalInfo) {
     $html .= "<p><strong>Additional Info:</strong> {$additionalInfo}</p>";
 }
 
-$recipient = $MAILGUN_RECIPIENT ?: $customer_email;
+$recipient = $MAILGUN_RECIPIENTS ?: $customer_email;
 $subject   = "New Quote - {$customer_first} {$customer_last} - {$year} {$make} {$model}";
 
 // Send via Mailgun REST API using curl
