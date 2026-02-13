@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import tw from "twin.macro";
+import emailjs from "@emailjs/browser";
 import { useBooking } from "../../hooks/useBooking";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -212,8 +213,10 @@ const StepFour = () => {
     setIsReady(isBookingComplete);
   }, [bookingData]);
 
-  const sendEmail = async (e) => {
+  const sendEmail = (e) => {
     e.preventDefault();
+
+    if (!form.current) return;
 
     const formData = new FormData(form.current);
     const formFields = Object.fromEntries(formData.entries());
@@ -227,47 +230,51 @@ const StepFour = () => {
       .filter(Boolean)
       .join(", ");
 
-    const payload = {
-      customer_first: formFields.customer_first,
-      customer_last: formFields.customer_last,
-      customer_email: formFields.customer_email,
-      customer_phone: formFields.customer_phone,
+    const emailParams = {
+      from_name: 'Aztec Auto Glass',
+      from_email: 'quotes@aztecautoglass.ca',
+      ...formFields,
+      company_name: "Aztec Auto Glass",
+      car_type: bookingData.carType || "-",
+      year: bookingData.year || "-",
+      make: bookingData.make || "-",
+      model: bookingData.model || "-",
       sensors: selectedSensors || "None",
-      vin_number: formFields.vin_number,
-      customer_additionalInfo: formFields.customer_additionalInfo,
-      car_type: bookingData.carType,
-      year: bookingData.year,
-      make: bookingData.make,
-      model: bookingData.model,
-      service: bookingData.service,
-      selected_date: bookingData.selectedDate,
-      selected_time: bookingData.selectedTime,
+      selected_datetime: `${bookingData.selectedDate || "-"}, ${bookingData.selectedTime || "-"}`,
       estimated_duration: totalDuration > 0 ? `${totalDuration} min` : "-",
+      service_title: "SERVICE",
+      package_name: bookingData.service.map((s) => s.name).join(", ") || "None",
+      addons: "N/A",
     };
 
-    console.log("--- Sending quote to server ---");
+    const emailTable = `<table style="width: 100%; border-collapse: collapse;">
+      ${Object.entries(emailParams)
+        .map(
+          ([key, value]) => `
+        <tr>
+          <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold; text-transform: capitalize;">${key.replace(/_/g, " ")}</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">${value}</td>
+        </tr>
+      `
+        )
+        .join("")}
+    </table>`;
 
-    try {
-      const response = await fetch("/api/send-email.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const mailParams = { email: 'quotesaztec@gmail.com', html: emailTable };
 
-      const responseData = await response.json();
-      console.log("Server response:", response.status, responseData);
-
-      if (!response.ok) throw new Error(responseData.error || "Failed to send");
-
-      form.current.reset();
-      toast(WithAvatar, {
-        className:
-          "shadow-lg overflow-visible scale-100 ring-1 ring-black/5 rounded-xl flex items-center gap-6 bg-slate-800 highlight-white/5",
-      });
-    } catch (error) {
-      console.error("Send error:", error);
-      toast(`Quote failed to send: ${error.message}`);
-    }
+    emailjs.send('service_cd11f0u', 'template_wqwkf7u', mailParams, 'KDlmw3-jz2NrUWKXZ').then(
+      () => {
+        form.current.reset();
+        toast(WithAvatar, {
+          className:
+            "shadow-lg overflow-visible scale-100 ring-1 ring-black/5 rounded-xl flex items-center gap-6 bg-slate-800 highlight-white/5",
+        });
+      },
+      (error) => {
+        console.log(error);
+        toast(`Quote failed to send: ${JSON.stringify(error)}`);
+      }
+    );
   };
 
   return (
